@@ -98,3 +98,38 @@ export PATRONICTL_CONFIG_FILE=/home/postgres/patroni/patroni.yml
 
 
 patroni /home/postgres/patroni/patroni.yml > /home/postgres/patroni/pg_patroni.log 2>&1 &
+
+
+----参数配置说明
+#############patroni参数###########
+ttl: 10
+loop_wait: 10
+retry_timeouts: 10
+maximum_lag_on_failover: 1048576
+
+############DCS中配置的dynamic PostgreSQL参数##########################
+max_connections: 2000
+max_locks_per_transaction: 64
+max_worker_processes: 256
+max_prepared_transactions: 2000
+wal_level: replica
+wal_log_hints: on
+track_commit_timestamp: on
+max_wal_senders: 64
+max_replication_slots: 64
+wal_keep_segments: 16
+### wal_keep_size: 128MB   ##该参数已废弃
+
+patronictl  edit-config -p 'max_connections=2000' -p 'max_locks_per_transaction=64' -p 'max_worker_processes=256' --force
+patronictl  edit-config -p 'max_prepared_transactions=2000' -p 'wal_level=replica' -p 'wal_log_hints=on' --force
+patronictl edit-config -p 'track_commit_timestamp=on' -p 'max_wal_senders=64' -p 'max_replication_slots=64' -p 'wal_keep_segments=16' --force
+############DCS中配置的dynamic PostgreSQL参数##########################
+其他参数可以在postgresql.base.conf中修改,然后reload或者重启生效
+
+DCS中修改的参数会dump到postgresql.conf，不要手动修改postgresql.conf
+
+另外，以下参数也是patroni控制的，在patroni.yml配置文件中指定，postgresql.base.conf不再需要配置
+listen_addresses - is set either from postgresql.listen or from PATRONI_POSTGRESQL_LISTEN environment variable
+port - is set either from postgresql.listen or from PATRONI_POSTGRESQL_LISTEN environment variable
+cluster_name - is set either from scope or from PATRONI_SCOPE environment variable
+hot_standby: on
