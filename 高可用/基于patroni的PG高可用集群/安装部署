@@ -1,0 +1,100 @@
+etcd-v3.3.11-linux-amd64.tar.gz
+PostgreSQL 12.5 源码编译版本
+--patroni及依赖包
+python3.6
+psycopg2-binary==2.8.6
+patroni 2.0.1
+
+
+--------------------------------------------------------------------------安装------------------------------------------------------------------------------------------
+---------------------------etcd的安装只需要在DCS节点中安装，安装PG的容器不需要装，所以不需要镜像，DCS节点上DBA手工安装即可--------------------
+--------------------------------------------------------------PG包和patroni安装包需要在PG实例容器上安装-------------------------------------------------------
+--安装etcd(root用户)
+上传 etcd-v3.3.11-linux-amd64.tar.gz 到/usr/local并解压 tar -xvf etcd-v3.3.11-linux-amd64.tar.gz
+tar -zxvf etcd-v3.3.11-linux-amd64.tar.gz
+启动etcd:
+nohup /usr/local/etcd-v3.3.11-linux-amd64/etcd --config-file=/home/etcd/conf/pg_patroni_etcd.conf.yml >/home/etcd/log/pg_patroni_etcd.log 2>&1 &
+
+
+--PG的安装(root用户)
+上传postgres_12.5_centos7_x86_64.tar.gz 解压到 /usr/local目录即可
+tar -xvf postgres_12.5_centos7_x86_64.tar.gz
+创建postgres用户组，postgres 用户
+groupadd postgres
+useradd -g postgres postgres
+echo 用户的密码 | passwd --stdin postgres
+chown -R postgres:postgres /usr/local/postgresql_12.5
+
+
+--安装patroni(root用户)
+安装 python3.6, 新版本patroni依赖python3
+ls /usr/bin/python*
+yum install -y python36
+
+
+升级pip版本
+wget https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py
+/usr/local/bin/pip --version
+
+
+安装patroni依赖包 psycopg2-binary 2.8.6
+/usr/local/bin/pip install psycopg2-binary==2.8.6
+
+
+上传并解压patroni_etcd_201.tar.gz，先将包中的python-etcd-0.4.5.tar.gz解压并安装python-etcd
+tar -xvf python-etcd-0.4.5.tar.gz
+cd python-etcd-0.4.5
+python3 setup.py install
+
+
+安装patroni
+[root@localhost patroni_etcd_201]# ls
+click-7.1.2-py2.py3-none-any.whl prettytable-2.0.0-py3-none-any.whl python-etcd-0.4.5 setuptools-52.0.0-py3-none-any.whl wcwidth-0.2.5-py2.py3-none-any.whl
+dnspython-2.1.0-py3-none-any.whl psutil-5.8.0-cp36-cp36m-manylinux2010_x86_64.whl python-etcd-0.4.5.tar.gz six-1.15.0-py2.py3-none-any.whl ydiff-1.2.tar.gz
+patroni-2.0.1-py3-none-any.whl python_dateutil-2.8.1-py2.py3-none-any.whl PyYAML-5.4.1-cp36-cp36m-manylinux1_x86_64.whl urllib3-1.26.2-py2.py3-none-any.whl
+[root@localhost patroni_etcd_201]#
+
+/usr/local/bin/pip install *.whl
+
+
+[root@10-84-173-5.test-test.bjht pip_pack]# /usr/local/bin/pip list
+Package Version
+--------------- -------
+click 7.1.2
+dnspython 2.1.0
+patroni 2.0.1
+pip 20.3.3
+prettytable 2.0.0
+psutil 5.8.0
+psycopg2-binary 2.8.6
+python-dateutil 2.8.1
+python-etcd 0.4.5
+PyYAML 5.3.1
+setuptools 51.3.3
+six 1.15.0
+urllib3 1.26.2
+wcwidth 0.2.5
+wheel 0.36.2
+ydiff 1.2
+[root@10-84-173-5.test-test.bjht pip_pack]#
+python-etcd 0.4.5，psycopg2-binary 2.8.6，PyYAML 5.3.1，patroni 2.0.1 这些包没有一定会报错
+
+
+[root@10-84-173-5.test-test.bjht pip_pack]# patroni --version
+patroni 2.0.1
+[root@10-84-173-5.test-test.bjht pip_pack]#
+
+--启动patroni
+mkdir -p /home/service/var/pgdata
+chown postgres:postgres -R /home/service/var/pgdata
+chmod -R 700 /home/service/var/pgdata
+
+--环境变量
+PATH=$PATH:$HOME/.local/bin:$HOME/bin:/usr/local/postgresql_12.5/bin/
+export PATH
+export LD_LIBRARY_PATH=/usr/local/postgresql_12.5/lib
+export PATRONICTL_CONFIG_FILE=/home/postgres/patroni/patroni.yml
+
+
+patroni /home/postgres/patroni/patroni.yml > /home/postgres/patroni/pg_patroni.log 2>&1 &
